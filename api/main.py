@@ -4,12 +4,13 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 import json
-from extraction import main  
-from diseaseEngine import run_disease_processing , run_differet_disease_processing, fetch_info_from_gpt2
+from backend.extraction import main  
+from backend.diseaseEngine import run_disease_processing , run_differet_disease_processing, fetch_info_from_gpt2
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 import zipfile
-from wordFilling.wordFilling import fillDoc
+from backend.wordFilling.wordFilling import fillDoc
+
 
 
 extracted_data_storage = None
@@ -524,3 +525,6 @@ async def get_zip_filename():
         return {"filename": f"{zip_name}.zip"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching filename: {str(e)}")
+    
+
+handler = Mangum(app)

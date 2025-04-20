@@ -23,6 +23,7 @@ langchain-text-splitters==0.3.8
 langsmith==0.3.27
 llmwhisperer-client==2.3.0
 lxml==5.3.2
+mangum==0.19.0
 markdown-it-py==3.0.0
 mdurl==0.1.2
 openai==1.74.0
