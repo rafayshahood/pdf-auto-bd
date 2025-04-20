@@ -4,12 +4,12 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 import json
-from backend.extraction import main  
-from backend.diseaseEngine import run_disease_processing , run_differet_disease_processing, fetch_info_from_gpt2
+from extraction import main  
+from diseaseEngine import run_disease_processing , run_differet_disease_processing, fetch_info_from_gpt2
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 import zipfile
-from backend.wordFilling.wordFilling import fillDoc
+from wordFilling.wordFilling import fillDoc
 
 
 
