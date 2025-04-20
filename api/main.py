@@ -527,4 +527,3 @@ async def get_zip_filename():
         raise HTTPException(status_code=500, detail=f"Error fetching filename: {str(e)}")
     
 
-handler = Mangum(app)
