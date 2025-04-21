@@ -140,6 +140,7 @@ async def upload_pdf(file: UploadFile = File(...), action: str = Form(...), sn_n
 
         # Run your full processing function
         extracted_data = main(tmp_path)
+        print(extracted_data) 
         extracted_data_storage = extracted_data  
 
 
