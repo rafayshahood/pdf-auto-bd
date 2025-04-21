@@ -29,10 +29,10 @@ submission_data = {
 
 app = FastAPI()
 
-# Allow frontend requests (from React app)
+# Configure CORS if needed
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (you can specify "http://localhost:3000" later)
+    allow_origins=["*"],  # Allow all origins, can restrict later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
