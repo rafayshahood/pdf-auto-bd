@@ -46,6 +46,7 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
 
 @app.get("/")
@@ -83,7 +84,22 @@ def login(request: LoginRequest):
 async def upload_pdf(file: UploadFile = File(...), action: str = Form(...), sn_name: str = Form(...), appointment_dates: str = Form(...), appointment_times: str = Form(...)):
     global extracted_data_storage 
     global submission_data
+
+    file_size = len(await file.read())  # Get the file size
+    
     try:
+
+
+        # Read the file content once
+        file_content = await file.read()
+
+        # Check file size
+        file_size = len(file_content)
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File size is too large. Maximum allowed size is {MAX_FILE_SIZE // (1024 * 1024)} MB.",
+            )
         # Save uploaded file temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(await file.read())
