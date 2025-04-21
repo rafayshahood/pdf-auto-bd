@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langchain.output_parsers import PydanticOutputParser
 from dotenv import load_dotenv
 import json
-
+import os
 
 load_dotenv() 
 extractionResults = []  # global variable available throughout the notebook
@@ -161,7 +161,7 @@ def process_485_information(extracted_text):
 
 
 def extract_text_from_pdf(file_path, pages_list=None):
-    llmw = LLMWhispererClientV2()
+    llmw = LLMWhispererClientV2(api_key=os.getenv("LLMWHISPERER_API_KEY"))
 
     
     try:
