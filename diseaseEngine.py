@@ -117,6 +117,7 @@ async def run_disease_processing(extracted_data):
     for i, disease_name in enumerate(diseasesArray):
         if provided_medications:
             response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications, oxygen_flag, diabetec_flag)
+            
 
         response_json = json.loads(response) if isinstance(response, str) else response
         response_json["showButton"] = check_for_keywords(response_json)
@@ -138,7 +139,7 @@ async def run_disease_processing(extracted_data):
             response_json["text2"] = "No medications left to process."
             response_json["med"] ="No medications left to process."
             response_json["showButton"] = "3"  
-            response_json["diseaseName"] = disease_name
+        response_json["diseaseName"] = disease_name
 
         print(f"in check 2: {i}")
         # ✅ Remove used medication if found
@@ -176,6 +177,7 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
     # print(provided_medications, oxygen_flag, diabetec_flag)
     if provided_medications:
         response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications, oxygen_flag, diabetec_flag)
+        
 
     response_json = json.loads(response) if isinstance(response, str) else response
     response_json["showButton"] = check_for_keywords(response_json)
@@ -189,7 +191,7 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
         response_json["text2"] = "No medications left to process."
         response_json["med"] ="No medications left to process."
         response_json["showButton"] = "3"  
-        response_json["diseaseName"] = disease_name
+    response_json["diseaseName"] = disease_name
 
     # ✅ Remove used medication if found
     if "med" in response_json and response_json["med"] not in ["no medication found in database", ""]:

@@ -52,7 +52,7 @@ def process_document_full(file_path, newHeader, diseaseName, extractedResults, r
     # Load the document.
     doc = Document(file_path)
     
-
+    print("5")
     # 1. Header Text Replacement.
     old_header_text = "MINT HOME HEALTH CARE"
     for section in doc.sections:
@@ -108,6 +108,7 @@ def process_document_full(file_path, newHeader, diseaseName, extractedResults, r
     # Define the placeholder text in the document. Adjust it if needed.
     placeholder = "Fall Precautions to be replaced"
     
+    print("6")
     # Iterate over all runs in all tables and replace the placeholder if found.
     for table in doc.tables:
         for row in table.rows:
@@ -144,6 +145,8 @@ def process_document_full(file_path, newHeader, diseaseName, extractedResults, r
         "Pedal R/L": "pedal r/l",
         "Dorsum R/L": "dorsum r/l"
     }
+
+    print("7")
     # Uncheck all Edema checkboxes.
     for table in doc.tables:
         for row in table.rows:
@@ -196,6 +199,8 @@ def process_document_full(file_path, newHeader, diseaseName, extractedResults, r
                     for run in paragraph.runs:
                         if target_text in run.text:
                             run.text = run.text.replace(target_text, replacement_text)
+
+    print("8")
 
         # Determine correct checkbox symbol based on user input
     vertigo_checkbox = "☒Vertigo" if check_vertigo else "☐Vertigo"  # Checked or Unchecked "Vertigo"
