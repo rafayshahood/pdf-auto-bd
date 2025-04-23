@@ -184,7 +184,7 @@ async def run_disease_processing_endpoint():
         # Await the result of the disease processing function
         response_gpt = await run_disease_processing(extracted_data_storage)
         diseaseList = response_gpt['fullDiseasesArray']
-        # print(f"disease list: {diseaseList}")
+        print(f"disease list: {diseaseList}")
         mainContResponse = response_gpt['mainContResponse']
 
         # print(mainContResponse)

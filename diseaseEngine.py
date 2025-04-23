@@ -3,6 +3,8 @@ import json
 import openai
 from dotenv import load_dotenv
 from diseaseHelperFunct import wait_for_run_completion, gpt_prompts, find_closest_medication
+import re
+from fuzzywuzzy import process
 
 # Load your keys
 load_dotenv()
@@ -60,7 +62,37 @@ def check_for_keywords(response_json):
     return show_button
 
 
+# Function to remove duplicates and normalize diagnoses using fuzzy matching
+def get_unique_diseases(diseases_array, threshold=75):
+    unique_diseases = []
+    seen_diseases = []  # Keep track of diseases we've already seen (normalized)
+    
+    for disease in diseases_array:
+        # Normalize: Remove any ICD code (assumes ICD code format is alpha-numeric, separated by space or commas)
+        normalized_disease = re.sub(r'\s*\(.*\)\s*', '', disease)  # Remove anything in parentheses (e.g., ICD codes)
+        normalized_disease = normalized_disease.strip().lower()  # Normalize case and strip spaces
+        
+        # Use fuzzy matching to compare the disease with already seen diseases
+        closest_match = find_closest_disease(normalized_disease, seen_diseases, threshold)
+        
+        if closest_match is None:  # If no close match is found, consider it a unique disease
+            unique_diseases.append(disease)
+            seen_diseases.append(normalized_disease)  # Add to seen list
 
+    return unique_diseases
+
+# Fuzzy matching function to find the closest matching disease
+def find_closest_disease(disease_name, seen_diseases, threshold=75):
+    """
+    Finds the closest matching disease name in the seen_diseases list using fuzzy matching.
+    If a match is found above the threshold, return it; otherwise, return None.
+    """
+    if not seen_diseases:
+        return None  # No diseases to compare against
+    
+    best_match, score = process.extractOne(disease_name, seen_diseases)
+    
+    return best_match if score >= threshold else None  
 
 # Extract relevant data and split by '--', removing empty strings
 def extract_and_split_diagnoses(extracted_data):
@@ -85,8 +117,10 @@ def extract_and_split_diagnoses(extracted_data):
     for diagnosis in combined_diagnoses:
         diseases_array.extend([d.strip() for d in diagnosis.split("--") if d.strip()])
 
+    unique_diseases = get_unique_diseases(diseases_array)
 
-    return diseases_array
+
+    return unique_diseases
     
 
 # 🛠 Main function
