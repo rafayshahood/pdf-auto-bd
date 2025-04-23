@@ -84,6 +84,25 @@ def modify_text2_with_conditions(text2, o2_flag, diabetec_flag):
 
     return text2
 
+
+# Function to ensure the dictionary has 9 pages
+def add_missing_pages(response_dict, total_pages=9):
+    current_pages = list(response_dict.keys())
+    
+    # Check how many pages are already in the dictionary
+    for i in range(1, total_pages + 1):
+        page_key = f"page{i}"
+        if page_key not in current_pages:
+            # Add missing pages with default values
+            response_dict[page_key] = {
+                "text1": "Not enough disease to process",
+                "text2": "Not enough disease to process",
+                "med": "Not enough disease to process",
+                "showButton": 1  
+            }
+    return response_dict
+
+
 # --------------------------
 # (Make sure that extractedResults, mainContResponse, and other external variables are defined.)
 def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
@@ -114,6 +133,9 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
     dischargeLastPage = {'text1': """Upon today’s assessment patient's condition is stable, vital signs remain stable recently. Patient/PCG monitored with discharge instruction.""",
                          'text2': """SN admitted the patient for comprehensive skilled nursing assessment, observation and evaluation of all body systems. SN to assess vital signs, pain level. SN performed to check vital signs and scale pain (1-10) every visit. """ + add_special_conditions(oxygenFlag, dm2_value) + """SN to evaluate therapeutic response to current/new medications and compliance to medication/diet regimen, home safety issues and psychosocial adjustment. SN informed Patient/PCG regarding possible discharge from services next visit. Patient/ PCG instructed re medication regimen -take all prescribed medications as ordered; if a dose is skipped never take double dose; do not stop taking medicine abruptly, keep your medicine in original container. Instructions are: measures to increase activity tolerance -use energy saving techniques, rest frequently during an activity, schedule an activity when most tolerated-after rest periods, after pain meds, at least one hour after meals; put most frequently used items within easy reach; eat a well-balanced diet; set realistic goals.""",
                          }
+
+
+    mainContResponse = add_missing_pages(mainContResponse, total_pages=9)
 
 
 

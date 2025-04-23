@@ -523,7 +523,7 @@ async def generate_documents():
         global submission_data
         global mainContResponse
 
-        print("1")
+        
         # Generate the disease list
         selectedDiseaseList = [page_data["diseaseName"] for page_data in mainContResponse.values()]
 
