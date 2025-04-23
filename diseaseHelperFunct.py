@@ -78,10 +78,10 @@ def gpt_prompts(query_type, query_value, medication_list = None):
 
     TASK: Search for structured medical information on the disease: '{query_value}'. 
     - Ignore any leading code in the disease name (e.g., "I11.9 Hypertensive heart disease" → "Hypertensive heart disease").
-    - FIRST try to select a medication for the disease from the following provided list:
+    - Try to select a medication for the disease from the following provided list:
     {medication_list}
     - If a matching medication is found, use it exactly as provided (including dosage and instructions). DO NOT modify or reformat it.
-    - If no matching medication is found, then find a suitable medication yourself.
+    - - If no matching medication is found, return "no medication found" in all responses (text1, text2, med fields).
     - Ensure text1, text2, and med fields remain synchronized.
     - Escape all double quotes (") inside text fields to prevent JSON errors.
 
@@ -98,8 +98,13 @@ def gpt_prompts(query_type, query_value, medication_list = None):
     
     STRICT GUIDELINES:
     - If matching medication found in the provided list, use the exact text without changes.
-    - If no matching medication found, select an appropriate medication yourself.
     - Always fill the "med" field with the medication name.
+    - If no matching medication found from the list return:
+        {{
+        "text1": "no medication found for the disease",
+        "text2": "no medication found for the disease",
+        "med": "no medication found for the disease"
+    }}
     - If the disease is not found, return:
     {{
         "text1": "no disease found in database",
@@ -117,9 +122,10 @@ def gpt_prompts(query_type, query_value, medication_list = None):
 
         TASK: Search for structured medical information on the disease: '{query_value}'.
         - If the disease name contains a leading code (e.g., "I11.9 Hypertensive heart disease with"), **ignore the code** and use only the disease name.
-        - FIRST, try to select a medication from your own knowledge base.
-        - If you find a medication, use it exactly as you found it (including dosage and instructions). DO NOT modify or reformat it.
-        - If no matching medication is found from your knowledge, choose a suitable one and ensure that it fits the description of the disease.
+        - FIRST try to select a medication for the disease from the following provided list:
+        {medication_list}
+        - If a matching medication is found, use it exactly as provided (including dosage and instructions). DO NOT modify or reformat it.
+        - If no matching medication is found, return "no medication found" in all responses (text1, text2, med fields).
         - Ensure `text1`, `text2`, and `med` fields remain synchronized.
         - Escape all double quotes (") inside text fields to prevent JSON errors.
 
@@ -132,7 +138,12 @@ def gpt_prompts(query_type, query_value, medication_list = None):
 
         STRICT GUIDELINES:
         - If a medication is found, use the exact text without changes.
-        - If no matching medication is found, select an appropriate medication yourself based on the disease.
+        - If no matching medication found from the list return:
+                {{
+                "text1": "no medication found for the disease",
+                "text2": "no medication found for the disease",
+                "med": "no medication found for the disease"
+            }}
         - Always return ONLY valid JSON (no extra text, no commentary).
         - Escape all double quotes (") properly inside text fields.
         - Follow the specified format exactly—do not alter structure or wording.

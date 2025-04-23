@@ -94,7 +94,7 @@ async def run_disease_processing(extracted_data):
 
     # get the disease array
     fullDiseasesArray = extract_and_split_diagnoses(extracted_data)
-    diseasesArray = fullDiseasesArray[:8]
+    diseasesArray = fullDiseasesArray[:9]
 
     global provided_medications
     global oxygen_flag
