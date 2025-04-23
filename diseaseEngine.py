@@ -63,7 +63,7 @@ def check_for_keywords(response_json):
 
 
 # Function to remove duplicates and normalize diagnoses using fuzzy matching
-def get_unique_diseases(diseases_array, threshold=75):
+def get_unique_diseases(diseases_array, threshold=90):
     unique_diseases = []
     seen_diseases = []  # Keep track of diseases we've already seen (normalized)
     
@@ -82,7 +82,7 @@ def get_unique_diseases(diseases_array, threshold=75):
     return unique_diseases
 
 # Fuzzy matching function to find the closest matching disease
-def find_closest_disease(disease_name, seen_diseases, threshold=75):
+def find_closest_disease(disease_name, seen_diseases, threshold=90):
     """
     Finds the closest matching disease name in the seen_diseases list using fuzzy matching.
     If a match is found above the threshold, return it; otherwise, return None.
