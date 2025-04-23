@@ -172,7 +172,7 @@ async def run_disease_processing(extracted_data):
             response_json["text1"] = "No medications left to process. Please select option to leave the place empty"
             response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
             response_json["med"] ="No medications left to process. Please select option to leave the place empty"
-            response_json["showButton"] = "3"  
+            response_json["showButton"] = "2"  
         response_json["diseaseName"] = disease_name
 
         print(f"in check 2: {i}")
@@ -224,7 +224,7 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
         response_json["text1"] ="No medications left to process. Please select option to leave the place empty"
         response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
         response_json["med"] ="No medications left to process. Please select option to leave the place empty"
-        response_json["showButton"] = "3"  
+        response_json["showButton"] = "2"  
     response_json["diseaseName"] = disease_name
 
     # ✅ Remove used medication if found
