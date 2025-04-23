@@ -88,12 +88,12 @@ class PatientDetails(BaseModel):
     # principal diagnosis
     principalDiagnosis: str = Field(description="principal diagnosis of the patient?")
     # all other pertinant diagnosis
-    pertinentdiagnosis: str = Field(description="Other Pertinant Diagnosis of the individual. This section contains disease e.g I11.9 Hypertensive heart disease with. I11.9 is code, do not include this in the output only the disease name e.g Hypertensive heart disease with Only include . Separate each disease with a --")
+    pertinentdiagnosis: str = Field(description="Other Pertinant Diagnosis of the individual. This section contains disease e.g I11.9 Hypertensive heart disease with. I11.9 is code, do not include this in the output only the disease name e.g Hypertensive heart disease with Only include. Separate each disease with a --")
 
     
 class Diagnosis(BaseModel):
     # all other pertinant diagnosis cont
-    pertinentdiagnosisCont: str = Field(description="Other Pertinent Diagnoses continued. If not present return empty string. Separate each disease with a -")
+    pertinentdiagnosisCont: str = Field(description="Other Pertinent Diagnoses continued. If not present return empty string. Separate each disease with a --")
     # constipation check
     constipated: bool = Field(description="in section MEDICAL SUMMARY / NECESSITY tell whether the patient is constipated or not")
     # pain areas
