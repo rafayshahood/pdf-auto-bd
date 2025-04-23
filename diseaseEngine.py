@@ -235,11 +235,11 @@ async def fetch_info_from_gpt2(query_type, query_value):
     # Parse JSON
     parsed_response = json.loads(json_response)
 
-    if query_type != "Medication":
+    if query_type != "Medication-empty":
         parsed_response["showButton"] = check_for_keywords(parsed_response)
         parsed_response["diseaseName"] = query_value
 
-    if query_type == "Medication":
+    if query_type == "Medication-empty":
         parsed_response["med"] = "Medication left empty"
         parsed_response["showButton"] = "0"
         parsed_response["diseaseName"] = query_value
