@@ -85,22 +85,22 @@ def modify_text2_with_conditions(text2, o2_flag, diabetec_flag):
     return text2
 
 
-# Function to ensure the dictionary has 9 pages
-def add_missing_pages(response_dict, total_pages=9):
-    current_pages = list(response_dict.keys())
+# # Function to ensure the dictionary has 9 pages
+# def add_missing_pages(response_dict,  total_pages=9):
+#     current_pages = list(response_dict.keys())
     
-    # Check how many pages are already in the dictionary
-    for i in range(1, total_pages + 1):
-        page_key = f"page{i}"
-        if page_key not in current_pages:
-            # Add missing pages with default values
-            response_dict[page_key] = {
-                "text1": "Not enough disease to process",
-                "text2": "Not enough disease to process",
-                "med": "Not enough disease to process",
-                "showButton": 1  
-            }
-    return response_dict
+#     # Check how many pages are already in the dictionary
+#     for i in range(1, total_pages + 1):
+#         page_key = f"page{i}"
+#         if page_key not in current_pages:
+#             # Add missing pages with default values
+#             response_dict[page_key] = {
+#                 "text1": "Not enough disease to process",
+#                 "text2": "Not enough disease to process",
+#                 "med": "Not enough disease to process",
+#                 "showButton": 1  
+#             }
+#     return response_dict
 
 
 # --------------------------
@@ -117,7 +117,6 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
     appointment_times = submission_data['appointment_times']
     action = submission_data['action']
 
-    selectedDiseaseList.append("Discharge")
 
 
 
@@ -135,7 +134,24 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
                          }
 
 
-    mainContResponse = add_missing_pages(mainContResponse, total_pages=9)
+
+    current_pages = list(mainContResponse.keys())
+    
+    # Check how many pages are already in the dictionary
+    for i in range(1, 9 + 1):
+        page_key = f"page{i}"
+        if page_key not in current_pages:
+            # Add missing pages with default values
+            mainContResponse[page_key] = {
+                "text1": "Not enough disease to process",
+                "text2": "Not enough disease to process",
+                "med": "Not enough disease to process",
+                "showButton": 1  
+            }
+            selectedDiseaseList.append("No disease")
+
+            
+    selectedDiseaseList.append("Discharge")
 
 
 
