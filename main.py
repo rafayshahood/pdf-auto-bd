@@ -19,6 +19,7 @@ mainContResponse = None
 medicationList = None
 lastDiseaseNum = 10
 diseaseList = None
+totalDiseasePresent = None
 
 submission_data = {
     "action": None,
@@ -57,12 +58,16 @@ def read_root():
 # Login request
 @app.post("/login")
 def login(request: LoginRequest):
-    global mainContResponse, extracted_data_storage, medicationList, diseaseNum
+    global mainContResponse, extracted_data_storage, medicationList, diseaseNum, lastDiseaseNum, diseaseList, totalDiseasePresent
     mainContResponse = None
     extracted_data_storage = None
     medicationList = None
     diseaseNum = None
     
+    lastDiseaseNum = 10
+    diseaseList = None
+    totalDiseasePresent = None
+
     global submission_data
     submission_data = {
     "action": None,
@@ -178,12 +183,15 @@ async def run_disease_processing_endpoint():
         
         global mainContResponse
         global diseaseList
+        global totalDiseasePresent
         
         # if mainContResponse == None:
 
         # Await the result of the disease processing function
         response_gpt = await run_disease_processing(extracted_data_storage)
         diseaseList = response_gpt['fullDiseasesArray']
+
+        totalDiseasePresent = len(diseaseList)
         print(f"disease list: {diseaseList}")
         mainContResponse = response_gpt['mainContResponse']
 
@@ -315,11 +323,22 @@ async def run_different_disease(data: dict):
         # Process for running a different disease
 
         disease_info = data.get("disease_info")
-        global lastDiseaseNum
-        disease_name = diseaseList[lastDiseaseNum] 
-        print(disease_name)
-        updated_disease_data = await run_differet_disease_processing(extracted_data_storage, disease_name, lastDiseaseNum)
-        lastDiseaseNum = lastDiseaseNum +1
+        global lastDiseaseNum, totalDiseasePresent
+
+        if lastDiseaseNum > totalDiseasePresent:
+                    # Modify the page's content
+            updated_disease_data = {
+                "text1": "No more disease left to process",
+                "text2": "No more disease left to process",
+                "med": "No more disease left to process",
+                "showButton": "1"
+            }
+        else:
+
+            disease_name = diseaseList[lastDiseaseNum] 
+            print(disease_name)
+            updated_disease_data = await run_differet_disease_processing(extracted_data_storage, disease_name, lastDiseaseNum)
+            lastDiseaseNum = lastDiseaseNum +1
 
         global mainContResponse
         page_index = data.get("index")
@@ -341,6 +360,7 @@ async def run_same_disease_gpt(data: dict):
     try:
         # Process for running a different disease
         disease_info = data.get("disease_info")
+
 
         print(disease_info)
 
@@ -374,12 +394,21 @@ async def run_different_disease_gpt(data: dict):
         disease_info = data.get("disease_info")
 
 
-        global lastDiseaseNum
-        disease_name = diseaseList[lastDiseaseNum] 
+        global lastDiseaseNum, totalDiseasePresent
 
-        query_type = "Disease"
-        updated_disease_data = await fetch_info_from_gpt2(query_type, disease_name)
-        lastDiseaseNum = lastDiseaseNum +1
+        if lastDiseaseNum > totalDiseasePresent:
+                    # Modify the page's content
+            updated_disease_data = {
+                "text1": "No more disease left to process",
+                "text2": "No more disease left to process",
+                "med": "No more disease left to process",
+                "showButton": "1"
+            }
+        else:
+            disease_name = diseaseList[lastDiseaseNum] 
+            query_type = "Disease"
+            updated_disease_data = await fetch_info_from_gpt2(query_type, disease_name)
+            lastDiseaseNum = lastDiseaseNum +1
 
         global mainContResponse
         # print(mainContResponse)
