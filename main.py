@@ -17,7 +17,7 @@ from mangum import Mangum
 extracted_data_storage = None
 mainContResponse = None
 medicationList = None
-lastDiseaseNum = 9
+lastDiseaseNum = 10
 diseaseList = None
 
 submission_data = {
