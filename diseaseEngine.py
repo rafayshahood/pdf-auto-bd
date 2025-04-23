@@ -169,9 +169,9 @@ async def run_disease_processing(extracted_data):
                 # If provided medications are exhausted, generate a response for remaining diseases
         if not provided_medications:
             # Set dummy response for all remaining pages with no medications
-            response_json["text1"] = "No medications left to process."
-            response_json["text2"] = "No medications left to process."
-            response_json["med"] ="No medications left to process."
+            response_json["text1"] = "No medications left to process. Please select option to leave the place empty"
+            response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
+            response_json["med"] ="No medications left to process. Please select option to leave the place empty"
             response_json["showButton"] = "3"  
         response_json["diseaseName"] = disease_name
 
@@ -221,9 +221,9 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
             # If provided medications are exhausted, generate a response for remaining diseases
     if not provided_medications:
         # Set dummy response for all remaining pages with no medications
-        response_json["text1"] = "No medications left to process."
-        response_json["text2"] = "No medications left to process."
-        response_json["med"] ="No medications left to process."
+        response_json["text1"] ="No medications left to process. Please select option to leave the place empty"
+        response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
+        response_json["med"] ="No medications left to process. Please select option to leave the place empty"
         response_json["showButton"] = "3"  
     response_json["diseaseName"] = disease_name
 
