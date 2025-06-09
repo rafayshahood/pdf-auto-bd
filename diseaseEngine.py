@@ -18,32 +18,39 @@ provided_medications = None
 oxygen_flag = None
 diabetec_flag = None
 
+import re
+
 def specialConditions(text2, o2_flag, diabetec_flag):
     """
-    Inserts O₂ and Diabetes-related sentences into text2 at the correct location.
+    Inserts O₂ and Diabetes-related sentences after the third sentence of text2.
     """
-    target_lines = (
-        "SN admitted the patient for comprehensive skilled nursing assessment, observation and evaluation of all body systems. "
-        "SN to assess vital signs, pain level. SN performed to check vital signs and scale pain (1-10) every visit."
-    )
-
-    special_conditions_text = []
+    # Build the extra text
+    special = []
     if o2_flag:
-        special_conditions_text.append("Check O₂ saturation level with signs and symptoms of respiratory distress.")
+        special.append(
+            "Check O₂ saturation level with signs and symptoms of respiratory distress."
+        )
     if diabetec_flag:
-        special_conditions_text.append(
+        special.append(
             "SN to record blood sugar test results checked by Pt/PCG during the visits and report any significant changes to MD. "
             "SN to perform diabetic foot exam upon every visit. PCG assumes DM responsibilities, is confident, capable, and competent in checking blood sugar daily."
         )
+    if not special:
+        return text2  # Nothing to insert
 
-    if special_conditions_text:
-        conditions_text = " ".join(special_conditions_text)
-        if target_lines in text2:
-            text2 = text2.replace(target_lines, target_lines + " " + conditions_text, 1)
-        else:
-            text2 = conditions_text + " " + text2  # Fallback if target line is missing
+    insert_text = " ".join(special)
 
-    return text2
+    # Split into sentences (keeping the trailing period)
+    sentences = re.split(r'(?<=[.])\s+', text2.strip())
+
+    # If there are at least 3 sentences, insert after the third
+    if len(sentences) >= 3:
+        sentences.insert(3, insert_text)
+        return " ".join(sentences)
+
+    # Fallback: prepend if fewer than 3 sentences
+    return insert_text + " " + text2
+
 
 def check_for_keywords(response_json):
     show_button = False  # Default is False
@@ -139,7 +146,7 @@ async def run_disease_processing(extracted_data):
     provided_medications = extracted_data.get("medications", {}).get("medications", "").split("--")
     provided_medications = [m.strip() for m in provided_medications if m.strip()]
 
-    # set the oxugen booleans
+    # set the oxygen booleans
     oxygen_flag = extracted_data.get("diagnosis", {}).get("oxygen", False)
     diabetec_flag = extracted_data.get("diagnosis", {}).get("diabetec", False)
 
@@ -150,17 +157,25 @@ async def run_disease_processing(extracted_data):
 
     for i, disease_name in enumerate(diseasesArray):
         if provided_medications:
-            response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications, oxygen_flag, diabetec_flag)
+            response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications)
             
+        print("RAW GPT RESPONSE:", repr(response))
 
-        response_json = json.loads(response) if isinstance(response, str) else response
+        raw = response  # the assistant’s text
+
+        # strip any leading/trailing ```json fences
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.IGNORECASE)
+
+        # now parse strictly
+        response_json = json.loads(raw)
         response_json["showButton"] = check_for_keywords(response_json)
         if (response_json["showButton"] == "0"):
+            # add oxygen and diabetc statements in initial run
             response_json["text2"] = specialConditions(response_json["text2"], oxygen_flag, diabetec_flag)
         if (response_json["showButton"] == "2"):
             response_json["text1"] = "no medication found in database"
             response_json["text2"] = "no medication found in database"
-            response_json["text1"] = "no medication found "
+            response_json["med"] = "no medication found in database"
 
         print(f"in check 1: {i}")
         mainContResponse[f"page{i + 1}"] = response_json
@@ -176,6 +191,8 @@ async def run_disease_processing(extracted_data):
         response_json["diseaseName"] = disease_name
 
         print(f"in check 2: {i}")
+
+        print(response_json)
         # ✅ Remove used medication if found
         if "med" in response_json and response_json["med"] not in ["no medication found in database", ""]:
             used_medication = response_json["med"]
@@ -198,8 +215,6 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
     global oxygen_flag
     global diabetec_flag
 
-
-
     # get the medication liat 
     provided_medications = extracted_data.get("medications", {}).get("medications", "").split("--")
     provided_medications = [m.strip() for m in provided_medications if m.strip()]
@@ -210,7 +225,7 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
 
     # print(provided_medications, oxygen_flag, diabetec_flag)
     if provided_medications:
-        response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications, oxygen_flag, diabetec_flag)
+        response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications)
         
 
     response_json = json.loads(response) if isinstance(response, str) else response
@@ -218,7 +233,7 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
     if (response_json["showButton"] == "0"):
         response_json["text2"] = specialConditions(response_json["text2"], oxygen_flag, diabetec_flag)
     
-            # If provided medications are exhausted, generate a response for remaining diseases
+    # If provided medications are exhausted, generate a response for remaining diseases
     if not provided_medications:
         # Set dummy response for all remaining pages with no medications
         response_json["text1"] ="No medications left to process. Please select option to leave the place empty"
@@ -235,8 +250,7 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
             provided_medications.remove(closest_match)
 
     # print(response_json)
-    # ✅ Return result to frontend
-    # ✅ Return result to frontend
+
     return response_json
 
 
@@ -272,11 +286,16 @@ async def fetch_info_from_gpt2(query_type, query_value):
     if query_type != "Medication-empty":
         parsed_response["showButton"] = check_for_keywords(parsed_response)
         parsed_response["diseaseName"] = query_value
+        
 
     if query_type == "Medication-empty":
         parsed_response["med"] = "Medication left empty"
         parsed_response["showButton"] = "0"
         parsed_response["diseaseName"] = query_value
+
+    # no disease found in database of gpt
+    if parsed_response["text2"] != "no medication found for the disease" or parsed_response["text2"] != "no disease found in database":
+        parsed_response["text2"] = specialConditions(parsed_response["text2"], oxygen_flag, diabetec_flag)        
 
     print("check 4")
     return parsed_response

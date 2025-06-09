@@ -23,18 +23,20 @@ def find_closest_medication(med_name, med_list, threshold=75):
     return best_match if score >= threshold else None  # Only return if similarity is high
 
 # Function that sends the request and waits for completion
-def wait_for_run_completion(client, assistant_id, disease_name, provided_medications, o2=False, diabetec=False, sleep_interval=5):
+def wait_for_run_completion(client, assistant_id, disease_name, provided_medications, sleep_interval=5):
     try:
         # print(f"disease_name : {disease_name}")
         # print(f"provided_medications : {provided_medications}")
-        # print(f"client : {client}")
-        # print(f"assistant_id : {assistant_id}")
         # Create a new thread for each request
         empty_thread = client.beta.threads.create()
         thread_id = empty_thread.id
 
+        print(f"thread_id : {thread_id}")
+        print(f"assistant_id : {assistant_id}")
+
+
        # Prepare the message with flags and medication list
-        message_with_flags = f"Disease Name: {disease_name}\nO2Flag: {o2}\nDiabetesFlag: {diabetec}\nMedicationList: {list(provided_medications)}"
+        message_with_flags = f"Disease Name: {disease_name}\nMedicationList: {list(provided_medications)}"
         # print(f"message_with_flags : {message_with_flags}")
         # Send the request to the assistant
         client.beta.threads.messages.create(

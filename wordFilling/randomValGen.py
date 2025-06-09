@@ -33,7 +33,7 @@ def get_decreasing_bs_values(previous_bsFast, previous_bsRapid):
     return bsFastVal, bsRapidVal
 
 def getRangeValues(previous_bsFast, previous_bsRapid):
-    tempVal = str(get_random_value(97.7, 99.5))
+    tempVal = str(get_random_value(97, 99.5))
     hrVal = str(get_random_value(60, 100, is_integer=True))
     rrVal = str(get_random_value(16, 20, is_integer=True))
     oxygenVal = str(get_random_value(95, 99, is_integer=True))

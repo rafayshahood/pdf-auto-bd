@@ -132,7 +132,7 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
     dischargeLastPage = {'text1': """Upon today’s assessment patient's condition is stable, vital signs remain stable recently. Patient/PCG monitored with discharge instruction.""",
                          'text2': """SN admitted the patient for comprehensive skilled nursing assessment, observation and evaluation of all body systems. SN to assess vital signs, pain level. SN performed to check vital signs and scale pain (1-10) every visit. """ + add_special_conditions(oxygenFlag, dm2_value) + """SN to evaluate therapeutic response to current/new medications and compliance to medication/diet regimen, home safety issues and psychosocial adjustment. SN informed Patient/PCG regarding possible discharge from services next visit. Patient/ PCG instructed re medication regimen -take all prescribed medications as ordered; if a dose is skipped never take double dose; do not stop taking medicine abruptly, keep your medicine in original container. Instructions are: measures to increase activity tolerance -use energy saving techniques, rest frequently during an activity, schedule an activity when most tolerated-after rest periods, after pain meds, at least one hour after meals; put most frequently used items within easy reach; eat a well-balanced diet; set realistic goals.""",
                          }
-
+    print("a")
 
 
     current_pages = list(mainContResponse.keys())
@@ -153,26 +153,42 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
             
     selectedDiseaseList.append("Discharge")
 
-
+    print("b")
 
     # Modify text2 for all pages in mainContResponse
-    for page_key in mainContResponse:
-        response_data = mainContResponse[page_key]
-        response_data["text2"] = modify_text2_with_conditions(response_data["text2"], oxygenFlag, dm2_value)
-        mainContResponse[page_key] = json.dumps(response_data)
+    # for page_key in mainContResponse:
+    #     response_data = mainContResponse[page_key]
+    #     response_data["text2"] = modify_text2_with_conditions(response_data["text2"], oxygenFlag, dm2_value)
+    #     mainContResponse[page_key] = json.dumps(response_data)
 
+    for page_key in list(mainContResponse):
+        raw = mainContResponse[page_key]
+        if isinstance(raw, str):
+            # it’s a JSON string → parse it
+            response_data = json.loads(raw)
+        else:
+            # it’s already a dict
+            response_data = raw
 
-
-    for page_key in mainContResponse:
-        response_data =json.loads( mainContResponse[page_key]) # Parse JSON
-        # Remove brackets from text1 and text2
+        # now clean your text fields
         response_data["text1"] = remove_brackets(response_data["text1"])
         response_data["text2"] = remove_brackets(response_data["text2"])
+
+        # save it back as a dict (or re-dump to JSON if you really need a string later)
+        mainContResponse[page_key] = response_data
+    
+    # for page_key in mainContResponse:
+    #     response_data =json.loads( mainContResponse[page_key]) # Parse JSON
+    #     # Remove brackets from text1 and text2
+    #     response_data["text1"] = remove_brackets(response_data["text1"])
+    #     response_data["text2"] = remove_brackets(response_data["text2"])
         
 
-        # Save back the cleaned data
-        mainContResponse[page_key] = json.dumps(response_data)
+    #     # Save back the cleaned data
+    #     mainContResponse[page_key] = json.dumps(response_data)
 
+
+    print("d")
 
     wordFileName = './wordFilling/1-page-version copy.docx'  # Ensure this file exists in your working directory
 
@@ -219,6 +235,7 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
     patient_name = extractedResults['patientDetails']["name"] 
     zip_filename = f"{patient_name}.zip"  
 
+    print("e")
     output_files = []
 
     for i in range(valuesToGet):
@@ -226,14 +243,18 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
         check_f=False
         check_r=False
 
+        print("e-a")
+
         # Extract the starting time from the appointment time string
         time_str = appointment_times[i]
         start_time_str = time_str.split('-')[0].strip() if '-' in time_str else time_str.strip()
 
+        print("e-b")
         if getAction == "Reset" and i == 8:
             bsFastArray[i] = str(int(bsFastArray[i-1]) + random.randint(4, 8))
             bsRapidArray[i] = str(int(bsRapidArray[i-1]) + random.randint(4, 8))
 
+    
         if datetime.strptime(start_time_str, "%H:%M") < datetime.strptime("10:00", "%H:%M"):
             bsValue = bsFastArray[i]
             check_f=True
@@ -254,6 +275,20 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
             replacements_first_col['OXVAL)('] = oxygenArray[i]+ "%"
         else:
             replacements_first_col['OXVAL)('] = ""
+        print("e-b")
+
+        # inside your for-i loop
+        raw_page = mainContResponse.get(f'page{i+1}', {})
+        if isinstance(raw_page, str):
+            try:
+                page_data = json.loads(raw_page)
+            except json.JSONDecodeError:
+                page_data = {}
+        else:
+            page_data = raw_page
+
+        new_text1 = page_data.get("text1", "")
+        replacement_text = page_data.get("text2", "")
 
         replacements_second_col = {
             'T- 96.8': "T- " + tempArray[i],
@@ -265,11 +300,12 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
             'PORK, JOHN': extractedResults['patientDetails']["name"],
             '05/08/2023': datetime.strptime(appointment_dates[i], "%Y-%m-%d").strftime("%m/%d/%y"),
             '18:00-18:45': add_45_minutes(appointment_times[i]),
-            'new text1': json.loads(mainContResponse.get(f'page{i+1}', '{}')).get("text1", ""),
-            'replacement text': json.loads(mainContResponse.get(f'page{i+1}', '{}')).get("text2", ""),
+            'new text1': new_text1,
+            'replacement text': replacement_text,
 
         }
 
+        print("e-c")
         # bs value only shown if patient is diabetec
         if dm2_value:
             replacements_second_col['BS 198'] = "BS " + bsValue
@@ -285,18 +321,20 @@ def fillDoc(submission_data, mainContResponse, selectedDiseaseList):
         allSafetyMeasures = extractedResults['extraDetails']['safetyMeasures']
         allSafetyMeasures = clean_safety_measures(allSafetyMeasures)
 
-
+        print("f")
         out_file = process_document_full(
             wordFileName, headerPage, selectedDiseaseList[i], extractedResults, replacements_first_col, replacements_second_col,
             allSafetyMeasures, dm2_value, edemaResults, depressed_value, i, getAction, valuesToGet, check_vertigo, 
             check_f, check_r, palpitation_check
         )
 
+        print("g")
         if out_file:  # Ensure out_file is valid
             output_files.append(out_file)
         else:
             print(f"Failed to process document for page {i}")
 
+        print("h")
     return output_files
     #         # Create an in-memory ZIP file
     # zip_buffer = io.BytesIO()
