@@ -189,6 +189,6 @@ def gpt_prompts(query_type, query_value, medication_list = None):
         """
     
   else:
-      gpt_prompt == "None"
+      gpt_prompt = "None"
   
   return gpt_prompt
