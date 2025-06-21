@@ -12,7 +12,7 @@ import json
 import os
 
 load_dotenv() 
-extractionResults = []  # global variable available throughout the notebook
+# extractionResults = []  # global variable available throughout the notebook
 
 def clean_medications(medications_str, pain_medications_str):
     # Split into lists
@@ -180,44 +180,46 @@ def extract_text_from_pdf(file_path, pages_list=None):
 
 
 def process_485_pdf(file_path, pages_list=None):
-    global extractionResults  # Declare that we're modifying the global variable
+    # global extractionResults  # Declare that we're modifying the global variable
     extracted_text = extract_text_from_pdf(file_path, pages_list)
     # print(extracted_text)
     response = process_485_information(extracted_text)
-    extractionResults = response  
 
-    # If extractionResults is already a dict, you can use it directly.
-    if isinstance(extractionResults, dict):
-        extractionResults = extractionResults
+    # If final_result is already a dict, you can use it directly.
+    if isinstance(response, dict):
+        final_result = response
 
     else:
         # Remove markdown formatting if present
-        json_string = extractionResults
-        if json_string.startswith("```json"):
-            json_string = json_string.replace("```json", "").replace("```", "").strip()
-        try:
-            extractionResults = json.loads(json_string)
-        except json.JSONDecodeError as e:
-            error_exit(f"Error decoding JSON: {e}")
+        if isinstance(response, dict):
+            final_result = response
+        else:
+            json_string = response  # ✅ FIXED
+            if json_string.startswith("```json"):
+                json_string = json_string.replace("```json", "").replace("```", "").strip()
+            try:
+                final_result = json.loads(json_string)
+            except json.JSONDecodeError as e:
+                error_exit(f"Error decoding JSON: {e}")
 
-    extractionResults['diagnosis']['depression'] = getFlags(extracted_text, ["depressed", "depression"],1)
-    extractionResults['extraDetails']['vertigo'] = getFlags(extracted_text, ["Vertigo", "vertigo"], 0)
-    extractionResults['extraDetails']['palpitation'] = getFlags(extracted_text, ["palpitation", "Palpitation", "palpitations,","Palpitations"], 1)
+    final_result['diagnosis']['depression'] = getFlags(extracted_text, ["depressed", "depression"],1)
+    final_result['extraDetails']['vertigo'] = getFlags(extracted_text, ["Vertigo", "vertigo"], 0)
+    final_result['extraDetails']['palpitation'] = getFlags(extracted_text, ["palpitation", "Palpitation", "palpitations,","Palpitations"], 1)
     # Extract safety measures (handling case sensitivity)
-    safety_measures = extractionResults["extraDetails"].get("safetyMeasures", "").lower()
+    safety_measures = final_result["extraDetails"].get("safetyMeasures", "").lower()
 
     # Set flags based on presence
-    extractionResults["extraDetails"]["can"] = "true" if "cane" in safety_measures else "false"
-    extractionResults["extraDetails"]["walker"] = "true" if "walker" in safety_measures else "false"
+    final_result["extraDetails"]["can"] = "true" if "cane" in safety_measures else "false"
+    final_result["extraDetails"]["walker"] = "true" if "walker" in safety_measures else "false"
 
-    extractionResults["medications"]["medications"], extractionResults["medications"]["painMedications"] = clean_medications(extractionResults["medications"]["medications"], extractionResults["medications"]["painMedications"])
+    final_result["medications"]["medications"], final_result["medications"]["painMedications"] = clean_medications(final_result["medications"]["medications"], final_result["medications"]["painMedications"])
 
 
 
-    print(f"Response from LLM:\n{extractionResults}")
-    # print(extractionResults)
+    print(f"Response from LLM:\n{final_result}")
+    # print(final_result)
     
-    return extractionResults
+    return final_result
 
 
 

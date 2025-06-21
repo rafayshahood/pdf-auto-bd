@@ -4,151 +4,31 @@ import openai
 from dotenv import load_dotenv
 from diseaseHelperFunct import wait_for_run_completion, gpt_prompts, find_closest_medication
 import re
-from fuzzywuzzy import process
+from utilities import specialConditions, extract_and_split_diagnoses, check_for_keywords
 
 # Load your keys
 load_dotenv()
 client = openai.OpenAI()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 assistant_id = os.getenv("ASSISTANT_ID") 
+assistant_id_2 = os.getenv("ASSISTANT_ID_2") 
+
 if not assistant_id:
     raise ValueError("Assistant ID is missing. Please check the .env file.")
 
-provided_medications = None
-oxygen_flag = None
-diabetec_flag = None
-
-import re
-
-def specialConditions(text2, o2_flag, diabetec_flag):
-    """
-    Inserts O₂ and Diabetes-related sentences after the third sentence of text2.
-    """
-    # Build the extra text
-    special = []
-    if o2_flag:
-        special.append(
-            "Check O₂ saturation level with signs and symptoms of respiratory distress."
-        )
-    if diabetec_flag:
-        special.append(
-            "SN to record blood sugar test results checked by Pt/PCG during the visits and report any significant changes to MD. "
-            "SN to perform diabetic foot exam upon every visit. PCG assumes DM responsibilities, is confident, capable, and competent in checking blood sugar daily."
-        )
-    if not special:
-        return text2  # Nothing to insert
-
-    insert_text = " ".join(special)
-
-    # Split into sentences (keeping the trailing period)
-    sentences = re.split(r'(?<=[.])\s+', text2.strip())
-
-    # If there are at least 3 sentences, insert after the third
-    if len(sentences) >= 3:
-        sentences.insert(3, insert_text)
-        return " ".join(sentences)
-
-    # Fallback: prepend if fewer than 3 sentences
-    return insert_text + " " + text2
-
-
-def check_for_keywords(response_json):
-    show_button = False  # Default is False
-
-    # Check if "no disease found" or "no medication found" is in the response text
-    text1 = response_json.get("text1", "").lower()
-    text2 = response_json.get("text2", "").lower()
-
-    if "no disease found" in text1 or "no disease found" in text2:
-        show_button = "1"  # No disease found, hide the button
-    elif "no medication found" in text1 or "no medication found" in text2:
-        show_button = "2"  # No medication found, hide the button
-    else:
-        show_button = "0"  # Otherwise, show the button
-
-    return show_button
-
-
-# Function to remove duplicates and normalize diagnoses using fuzzy matching
-def get_unique_diseases(diseases_array, threshold=90):
-    unique_diseases = []
-    seen_diseases = []  # Keep track of diseases we've already seen (normalized)
-    
-    for disease in diseases_array:
-        # Normalize: Remove any ICD code (assumes ICD code format is alpha-numeric, separated by space or commas)
-        normalized_disease = re.sub(r'\s*\(.*\)\s*', '', disease)  # Remove anything in parentheses (e.g., ICD codes)
-        normalized_disease = normalized_disease.strip().lower()  # Normalize case and strip spaces
-        
-        # Use fuzzy matching to compare the disease with already seen diseases
-        closest_match = find_closest_disease(normalized_disease, seen_diseases, threshold)
-        
-        if closest_match is None:  # If no close match is found, consider it a unique disease
-            unique_diseases.append(disease)
-            seen_diseases.append(normalized_disease)  # Add to seen list
-
-    return unique_diseases
-
-# Fuzzy matching function to find the closest matching disease
-def find_closest_disease(disease_name, seen_diseases, threshold=90):
-    """
-    Finds the closest matching disease name in the seen_diseases list using fuzzy matching.
-    If a match is found above the threshold, return it; otherwise, return None.
-    """
-    if not seen_diseases:
-        return None  # No diseases to compare against
-    
-    best_match, score = process.extractOne(disease_name, seen_diseases)
-    
-    return best_match if score >= threshold else None  
-
-# Extract relevant data and split by '--', removing empty strings
-def extract_and_split_diagnoses(extracted_data):
-    # Extract the three diagnosis fields
-    principal_diagnosis = extracted_data.get("patientDetails", {}).get("principalDiagnosis", "").strip()
-    pertinent_diagnosis = extracted_data.get("patientDetails", {}).get("pertinentdiagnosis", "").strip()
-    pertinent_diagnosis_cont = extracted_data.get("diagnosis", {}).get("pertinentdiagnosisCont", "").strip()
-    
-
-    # Combine them into a single list, excluding empty values
-    combined_diagnoses = []
-    
-    if principal_diagnosis:
-        combined_diagnoses.append(principal_diagnosis)
-    if pertinent_diagnosis:
-        combined_diagnoses.append(pertinent_diagnosis)
-    if pertinent_diagnosis_cont:
-        combined_diagnoses.append(pertinent_diagnosis_cont)
-    
-    # Split each diagnosis string by '--' and strip any extra spaces
-    diseases_array = []
-    for diagnosis in combined_diagnoses:
-        diseases_array.extend([d.strip() for d in diagnosis.split("--") if d.strip()])
-
-    unique_diseases = get_unique_diseases(diseases_array)
-
-
-    return unique_diseases
-    
 
 # 🛠 Main function
-async def run_disease_processing(extracted_data):
+async def run_initial_disease_processing(extracted_data, session):
 
     # get the disease array
     fullDiseasesArray = extract_and_split_diagnoses(extracted_data)
     diseasesArray = fullDiseasesArray[:9]
 
-    global provided_medications
-    global oxygen_flag
-    global diabetec_flag
+    session["provided_medications"] = extracted_data.get("medications", {}).get("medications", "").split("--")
+    session["provided_medications"] = [m.strip() for m in session["provided_medications"] if m.strip()]
 
-
-    # get the medication liat 
-    provided_medications = extracted_data.get("medications", {}).get("medications", "").split("--")
-    provided_medications = [m.strip() for m in provided_medications if m.strip()]
-
-    # set the oxygen booleans
-    oxygen_flag = extracted_data.get("diagnosis", {}).get("oxygen", False)
-    diabetec_flag = extracted_data.get("diagnosis", {}).get("diabetec", False)
+    session["oxygen_flag"] = extracted_data.get("diagnosis", {}).get("oxygen", False)
+    session["diabetec_flag"] = extracted_data.get("diagnosis", {}).get("diabetec", False)
 
 
     print("check 1")
@@ -156,33 +36,31 @@ async def run_disease_processing(extracted_data):
     disease_mapping = {}
 
     for i, disease_name in enumerate(diseasesArray):
-        if provided_medications:
-            response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications)
-            
-        print("RAW GPT RESPONSE:", repr(response))
+        if session["provided_medications"]:
+            response =  wait_for_run_completion(client, assistant_id, disease_name, session["provided_medications"])
+            print("RAW GPT RESPONSE:", repr(response))
+            raw = response  
 
-        raw = response  # the assistant’s text
+            # strip any leading/trailing ```json fences
+            raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.IGNORECASE)
 
-        # strip any leading/trailing ```json fences
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.IGNORECASE)
+            # now parse strictly
+            response_json = json.loads(raw)
+            response_json["showButton"] = check_for_keywords(response_json)
+            if (response_json["showButton"] == "0"):
+                # add oxygen and diabetc statements in initial run
+                response_json["text2"] = specialConditions(response_json["text2"], session["oxygen_flag"], session["diabetec_flag"])
+            if (response_json["showButton"] == "2"):
+                response_json["text1"] = "no medication found in database"
+                response_json["text2"] = "no medication found in database"
+                response_json["med"] = "no medication found in database"
 
-        # now parse strictly
-        response_json = json.loads(raw)
-        response_json["showButton"] = check_for_keywords(response_json)
-        if (response_json["showButton"] == "0"):
-            # add oxygen and diabetc statements in initial run
-            response_json["text2"] = specialConditions(response_json["text2"], oxygen_flag, diabetec_flag)
-        if (response_json["showButton"] == "2"):
-            response_json["text1"] = "no medication found in database"
-            response_json["text2"] = "no medication found in database"
-            response_json["med"] = "no medication found in database"
-
-        print(f"in check 1: {i}")
-        mainContResponse[f"page{i + 1}"] = response_json
-        disease_mapping[f"page{i + 1}"] = disease_name
+            print(f"in check 1: {i}")
+            mainContResponse[f"page{i + 1}"] = response_json
+            disease_mapping[f"page{i + 1}"] = disease_name
         
                 # If provided medications are exhausted, generate a response for remaining diseases
-        if not provided_medications:
+        if not session["provided_medications"]:
             # Set dummy response for all remaining pages with no medications
             response_json["text1"] = "No medications left to process. Please select option to leave the place empty"
             response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
@@ -196,9 +74,9 @@ async def run_disease_processing(extracted_data):
         # ✅ Remove used medication if found
         if "med" in response_json and response_json["med"] not in ["no medication found in database", ""]:
             used_medication = response_json["med"]
-            closest_match = find_closest_medication(used_medication, provided_medications)
+            closest_match = find_closest_medication(used_medication, session["provided_medications"])
             if closest_match:
-                provided_medications.remove(closest_match)
+                session["provided_medications"].remove(closest_match)
 
     print("final check 1")
     # ✅ Return result to frontend
@@ -208,46 +86,65 @@ async def run_disease_processing(extracted_data):
     }
 
 
-# 🛠 Main function
-async def run_differet_disease_processing(extracted_data, disease_name, diseaseNum = 9):
+# 🛠 run different dosease
+async def run_differet_disease_processing(session, disease_name, query_type = None, updated_med = None):
 
-    global provided_medications
-    global oxygen_flag
-    global diabetec_flag
-
-    # get the medication liat 
-    provided_medications = extracted_data.get("medications", {}).get("medications", "").split("--")
-    provided_medications = [m.strip() for m in provided_medications if m.strip()]
-
+    print(query_type, updated_med)
+    print("1")
+    if query_type == None and updated_med == None:
+        # get the medication liat 
+        print("diff disease")
+        # provided_medications = extracted_data.get("medications", {}).get("medications", "").split("--")
+        # provided_medications = [m.strip() for m in provided_medications if m.strip()]
+        if session["provided_medications"]:
+            response =  wait_for_run_completion(client, assistant_id, disease_name, session["provided_medications"])
+        if not session["provided_medications"]:
+            # Set dummy response for all remaining pages with no medications
+            response_json["text1"] = "No medications left to process. Please select option to leave the place empty"
+            response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
+            response_json["med"] ="No medications left to process. Please select option to leave the place empty"
+            response_json["showButton"] = "2"  
+    else:
+        print("custom med")
+        print(disease_name, updated_med)
+        response =  wait_for_run_completion(client, assistant_id_2, disease_name, updated_med)
+    print("2")
     # set the oxugen booleans
-    oxygen_flag = extracted_data.get("diagnosis", {}).get("oxygen", False)
-    diabetec_flag = extracted_data.get("diagnosis", {}).get("diabetec", False)
+    # oxygen_flag = extracted_data.get("diagnosis", {}).get("oxygen", False)
+    # diabetec_flag = extracted_data.get("diagnosis", {}).get("diabetec", False)
 
-    # print(provided_medications, oxygen_flag, diabetec_flag)
-    if provided_medications:
-        response =  wait_for_run_completion(client, assistant_id, disease_name, provided_medications)
-        
+    print("RAW GPT RESPONSE:", repr(response))
 
-    response_json = json.loads(response) if isinstance(response, str) else response
+    raw = response  # the assistant’s text
+
+    # strip any leading/trailing ```json fences
+    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.IGNORECASE)
+    response_json = json.loads(raw)
+
     response_json["showButton"] = check_for_keywords(response_json)
     if (response_json["showButton"] == "0"):
-        response_json["text2"] = specialConditions(response_json["text2"], oxygen_flag, diabetec_flag)
-    
+        response_json["text2"] = specialConditions(response_json["text2"], session["oxygen_flag"], session["diabetec_flag"])
+    print("3") 
+    if query_type == None and updated_med == None:
     # If provided medications are exhausted, generate a response for remaining diseases
-    if not provided_medications:
-        # Set dummy response for all remaining pages with no medications
-        response_json["text1"] ="No medications left to process. Please select option to leave the place empty"
-        response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
-        response_json["med"] ="No medications left to process. Please select option to leave the place empty"
-        response_json["showButton"] = "2"  
+        if not session["provided_medications"]:
+            # Set dummy response for all remaining pages with no medications
+            response_json["text1"] ="No medications left to process. Please select option to leave the place empty"
+            response_json["text2"] = "No medications left to process. Please select option to leave the place empty"
+            response_json["med"] ="No medications left to process. Please select option to leave the place empty"
+            response_json["showButton"] = "2"  
+            # ✅ Remove used medication if found
+            if "med" in response_json and response_json["med"] not in ["no medication found in database", ""]:
+                used_medication = response_json["med"]
+                closest_match = find_closest_medication(used_medication, session["provided_medications"])
+                if closest_match:
+                    session["provided_medications"].remove(closest_match)
+    else:
+        response_json["showButton"] = "0"  
+
     response_json["diseaseName"] = disease_name
 
-    # ✅ Remove used medication if found
-    if "med" in response_json and response_json["med"] not in ["no medication found in database", ""]:
-        used_medication = response_json["med"]
-        closest_match = find_closest_medication(used_medication, provided_medications)
-        if closest_match:
-            provided_medications.remove(closest_match)
+
 
     # print(response_json)
 
@@ -255,31 +152,26 @@ async def run_differet_disease_processing(extracted_data, disease_name, diseaseN
 
 
 
-    
-async def fetch_info_from_gpt2(query_type, query_value):
+async def fetch_info_from_gpt2(query_type, query_value, session):
 
     global client
-    global provided_medications
-    global oxygen_flag
-    global diabetec_flag
 
-    gpt_prompt = gpt_prompts(query_type, query_value, provided_medications)
 
-    print("check 1")
+
+    gpt_prompt = gpt_prompts(query_type, query_value, session["provided_medications"])
+
     gpt_response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": gpt_prompt}]
-    )
+    model="gpt-4o-mini",
+    messages=[{"role": "system", "content": gpt_prompt}]
+)
 
     gpt_result = gpt_response.choices[0].message.content.strip()
-    print("check 2")
     # Extract JSON response
     json_start = gpt_result.find("{")
     json_end = gpt_result.rfind("}")
 
     json_response = gpt_result[json_start:json_end+1]  # Extract JSON content
 
-    print("check 3")
     # Parse JSON
     parsed_response = json.loads(json_response)
 
@@ -295,7 +187,7 @@ async def fetch_info_from_gpt2(query_type, query_value):
 
     # no disease found in database of gpt
     if parsed_response["text2"] != "no medication found for the disease" or parsed_response["text2"] != "no disease found in database":
-        parsed_response["text2"] = specialConditions(parsed_response["text2"], oxygen_flag, diabetec_flag)        
+        parsed_response["text2"] = specialConditions(parsed_response["text2"], session["oxygen_flag"], session["diabetec_flag"])        
 
     print("check 4")
     return parsed_response

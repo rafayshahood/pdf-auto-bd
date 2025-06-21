@@ -23,16 +23,16 @@ def find_closest_medication(med_name, med_list, threshold=75):
     return best_match if score >= threshold else None  # Only return if similarity is high
 
 # Function that sends the request and waits for completion
-def wait_for_run_completion(client, assistant_id, disease_name, provided_medications, sleep_interval=5):
+def wait_for_run_completion(client, assistant_id, disease_name, provided_medications, sleep_interval=5, max_wait=60):
     try:
-        # print(f"disease_name : {disease_name}")
+        print(f"disease_name : {disease_name}")
         # print(f"provided_medications : {provided_medications}")
         # Create a new thread for each request
         empty_thread = client.beta.threads.create()
         thread_id = empty_thread.id
 
-        print(f"thread_id : {thread_id}")
-        print(f"assistant_id : {assistant_id}")
+        # print(f"thread_id : {thread_id}")
+        # print(f"assistant_id : {assistant_id}")
 
 
        # Prepare the message with flags and medication list
@@ -50,6 +50,7 @@ def wait_for_run_completion(client, assistant_id, disease_name, provided_medicat
         )
         message_with_flags
         # print(f"run : {run}")
+        start_time = time.time()
         while True:
             run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
             if run.completed_at:
@@ -60,6 +61,18 @@ def wait_for_run_completion(client, assistant_id, disease_name, provided_medicat
                 # Delete the thread after retrieving the response
                 client.beta.threads.delete(thread_id)
                 return response
+
+
+            # Check if time limit exceeded
+            if time.time() - start_time > max_wait:
+                print("⏱️ Timeout reached. GPT run did not finish in time.")
+                client.beta.threads.delete(thread_id)
+                return json.dumps({
+                    "text1": "Gpt Timeout Rerun",
+                    "text2": "Gpt Timeout Rerun",
+                    "med": "Gpt Timeout Rerun"
+                })
+
 
             logging.info("Waiting for run to complete...")
             time.sleep(sleep_interval)
@@ -187,6 +200,7 @@ def gpt_prompts(query_type, query_value, medication_list = None):
             "text2": "no disease found in database"
             }}
         """
+    
     
   else:
       gpt_prompt = "None"
